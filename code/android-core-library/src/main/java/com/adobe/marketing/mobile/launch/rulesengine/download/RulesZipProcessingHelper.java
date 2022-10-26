@@ -6,7 +6,6 @@ import androidx.annotation.VisibleForTesting;
 import com.adobe.marketing.mobile.internal.CoreConstants;
 import com.adobe.marketing.mobile.internal.util.FileUtils;
 import com.adobe.marketing.mobile.internal.util.StringEncoder;
-import com.adobe.marketing.mobile.services.DeviceInforming;
 import com.adobe.marketing.mobile.services.Log;
 import com.adobe.marketing.mobile.services.ServiceProvider;
 import com.adobe.marketing.mobile.util.StreamUtils;
@@ -27,6 +26,7 @@ class RulesZipProcessingHelper {
 
     private static final String TEMP_RULES_ZIP = "rules.zip";
     private static final String TEMP_RULES_JSON = "rules.json";
+    private static final String TEMP_RULES_ASSETS = "assets";
 
 
     /**
@@ -74,7 +74,7 @@ class RulesZipProcessingHelper {
      * @param tag the tag used when creating and storing contents into the temporary directory.
      * @return the contents of TEMP_RULES_JSON if it was found and was readable; null otherwise.
      */
-    String unzipRules(final String tag) {
+    ExtractedRules unzipRules(final String tag) {
         if (!canProcess(tag)) return null;
 
         final File temporaryDirectory = getTemporaryDirectory(tag);
@@ -88,6 +88,8 @@ class RulesZipProcessingHelper {
 
         final File extractedRulesJsonFile =
                 new File(temporaryDirectory.getPath() + File.separator + TEMP_RULES_JSON);
+        final File extractedRulesAssets =
+                new File(temporaryDirectory.getPath() + File.separator + TEMP_RULES_ASSETS);
 
         if (!extractedRulesJsonFile.exists()) {
             Log.debug(CoreConstants.LOG_TAG, TAG, "Extract rules directory does not contain a rules.json file.");
@@ -102,7 +104,7 @@ class RulesZipProcessingHelper {
                 return null;
             }
 
-            return rules;
+            return new ExtractedRules(rules, extractedRulesAssets);
         } catch (final IOException e) {
             Log.debug(CoreConstants.LOG_TAG, TAG,
                     "Exception while processing rules from source %s", tag);

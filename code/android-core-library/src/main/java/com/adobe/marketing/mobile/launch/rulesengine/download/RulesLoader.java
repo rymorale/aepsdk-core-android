@@ -31,6 +31,8 @@ import com.adobe.marketing.mobile.util.TimeUtils;
 import com.adobe.marketing.mobile.util.UrlUtils;
 
 import java.io.ByteArrayInputStream;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
@@ -234,24 +236,38 @@ public class RulesLoader {
         }
 
         // Extract the rules zip
-        final String rules = rulesZipProcessingHelper.unzipRules(key);
-        if (rules == null) {
+        final ExtractedRules extractedRules = rulesZipProcessingHelper.unzipRules(key);
+        if (extractedRules.rules == null) {
             Log.debug(TAG, cacheName, "Failed to extract rules response zip into temp dir.");
             return new RulesLoadResult(null, RulesLoadResult.Reason.ZIP_EXTRACTION_FAILED);
         }
 
-        // Cache the extracted contents
-        final CacheEntry cacheEntry = new CacheEntry(new ByteArrayInputStream(rules.getBytes(StandardCharsets.UTF_8)),
+        // Cache the extracted rules json
+        final CacheEntry ruleJsonCacheEntry = new CacheEntry(new ByteArrayInputStream(extractedRules.rules.getBytes(StandardCharsets.UTF_8)),
                 CacheExpiry.never(), metadata);
-        final boolean cached = ServiceProvider.getInstance().getCacheService().set(cacheName, key, cacheEntry);
-        if (!cached) {
+        final boolean jsonCached = ServiceProvider.getInstance().getCacheService().set(cacheName, key, ruleJsonCacheEntry);
+        if (!jsonCached) {
             Log.debug(TAG, cacheName, "Could not cache rules from source %s", key);
+        }
+
+        // Cache the extracted assets (if present)
+        if (extractedRules.ruleAssets != null) {
+            try {
+                final CacheEntry ruleAssetsCacheEntry = new CacheEntry(new FileInputStream(extractedRules.ruleAssets),
+                        CacheExpiry.never(), metadata);
+                final boolean assetsCached = ServiceProvider.getInstance().getCacheService().set(cacheName, key, ruleAssetsCacheEntry);
+                if (!assetsCached) {
+                    Log.debug(TAG, cacheName, "Could not cache rule assets from source %s", key);
+                }
+            } catch (final FileNotFoundException fileNotFoundException) {
+                Log.debug(TAG, cacheName, "Could not find file at path %s", extractedRules.ruleAssets.getPath());
+            }
         }
 
         // Delete the temporary directory created for processing
         rulesZipProcessingHelper.deleteTemporaryDirectory(key);
 
-        return new RulesLoadResult(rules, RulesLoadResult.Reason.SUCCESS);
+        return new RulesLoadResult(extractedRules.rules, RulesLoadResult.Reason.SUCCESS);
     }
 
     /**

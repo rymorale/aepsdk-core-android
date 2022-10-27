@@ -31,6 +31,7 @@ import com.adobe.marketing.mobile.util.TimeUtils;
 import com.adobe.marketing.mobile.util.UrlUtils;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
@@ -253,11 +254,13 @@ public class RulesLoader {
         // Cache the extracted assets (if present)
         if (extractedRules.ruleAssets != null) {
             try {
-                final CacheEntry ruleAssetsCacheEntry = new CacheEntry(new FileInputStream(extractedRules.ruleAssets),
-                        CacheExpiry.never(), metadata);
-                final boolean assetsCached = ServiceProvider.getInstance().getCacheService().set(cacheName, key, ruleAssetsCacheEntry);
-                if (!assetsCached) {
-                    Log.debug(TAG, cacheName, "Could not cache rule assets from source %s", key);
+                for (final File assetFile : extractedRules.ruleAssets.listFiles()) {
+                    final CacheEntry ruleAssetsCacheEntry = new CacheEntry(new FileInputStream(assetFile),
+                            CacheExpiry.never(), metadata);
+                    final boolean assetsCached = ServiceProvider.getInstance().getCacheService().set(cacheName, key, ruleAssetsCacheEntry);
+                    if (!assetsCached) {
+                        Log.debug(TAG, cacheName, "Could not cache rule asset from source %s", key);
+                    }
                 }
             } catch (final FileNotFoundException fileNotFoundException) {
                 Log.debug(TAG, cacheName, "Could not find file at path %s", extractedRules.ruleAssets.getPath());

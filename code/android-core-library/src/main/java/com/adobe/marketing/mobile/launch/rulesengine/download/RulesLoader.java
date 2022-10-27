@@ -257,9 +257,10 @@ public class RulesLoader {
                 for (final File assetFile : extractedRules.ruleAssets.listFiles()) {
                     final CacheEntry ruleAssetsCacheEntry = new CacheEntry(new FileInputStream(assetFile),
                             CacheExpiry.never(), metadata);
-                    final boolean assetsCached = ServiceProvider.getInstance().getCacheService().set(cacheName, key, ruleAssetsCacheEntry);
+                    final String assetName = assetFile.getName();
+                    final boolean assetsCached = ServiceProvider.getInstance().getCacheService().set(cacheName, assetName, ruleAssetsCacheEntry);
                     if (!assetsCached) {
-                        Log.debug(TAG, cacheName, "Could not cache rule asset from source %s", key);
+                        Log.debug(TAG, cacheName, "Could not cache rule asset from source %s", assetName);
                     }
                 }
             } catch (final FileNotFoundException fileNotFoundException) {
